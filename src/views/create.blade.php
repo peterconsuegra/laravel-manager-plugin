@@ -161,6 +161,8 @@
             <label for="selected_version" class="form-label">Laravel version</label>
             <select class="form-select" id="selected_version" name="selected_version" v-model="form.selected_version">
               <option value="">Select Laravel version</option>
+              <option value="8.*">8.*</option>
+              <option value="9.*">9.*</option>
               <option value="10.*">10.*</option>
               <option value="11.*">11.*</option>
               <option value="12.*">12.*</option>
@@ -274,12 +276,6 @@
               <div class="step-label">Creating Laravel app / files</div>
             </div>
             <div class="skel-row" style="width:55%"></div>
-
-            <div class="d-flex align-items-center gap-2 step active">
-              <span class="step-dot"></span>
-              <div class="step-label">Linking with WordPress</div>
-            </div>
-            <div class="skel-row" style="width:68%"></div>
 
             <div class="d-flex align-items-center gap-2 step">
               <span class="step-dot"></span>
