@@ -35,7 +35,6 @@ echo "db_root_pass: $db_root_pass"
 echo "app_root: $route" 
 echo "logs_route: $logs_route"
 echo "logs_route: $logs_route"
-echo "wordpress_laravel_name: $wordpress_laravel_name"
 echo "server_conf: $server_conf"
 echo "wordpress_laravel_git_branch: $wordpress_laravel_git_branch"
 echo "wordpress_laravel_git: $wordpress_laravel_git"
@@ -54,13 +53,13 @@ fi
 
 project_route=$route/$project_name
 
-if [[ $action_name == "new_laravel" ]]; then
+if [[ $action_name == "New" ]]; then
 	echo "check2"
 	mkdir $project_route
 	echo "cd $project_route && $composer_bin create-project laravel/laravel="$laravel_version" . --prefer-dist 2>&1"
 	cd $project_route && $composer_bin create-project laravel/laravel="$laravel_version" . --prefer-dist 2>&1
 
-elif [[ $action_name == "import_laravel" ]]; then
+elif [[ $action_name == "Import" ]]; then
 	echo "check3"
 	mkdir $project_route
 	echo "cd $project_route && git clone -b $wordpress_laravel_git_branch $wordpress_laravel_git ."
@@ -98,29 +97,39 @@ MAIL_PASSWORD=null
 MAIL_ENCRYPTION=null
 
 DB_CONNECTION=mysql
-DB_HOST=$db_host
+DB_HOST=db
 DB_PORT=3306
 DB_DATABASE=$odb
 DB_USERNAME=$udb
 DB_PASSWORD=$pdb
 
 " > $project_route/.env
-	
+
 mkdir $logs_route/$project_name
 touch $logs_route/$project_name/error.log
 touch $logs_route/$project_name/access.log
-	
-	
+
 find $project_route -type f -exec chmod 644 {} \;    
 find $project_route -type d -exec chmod 755 {} \;
 chmod -R ug+rwx storage $project_route/bootstrap/cache
 
+# Always work inside the project directory
+cd "$project_route"
+	
 echo "Running the following commands..."
-echo "cd $route/$project_name && php artisan key:generate"
-echo "cd $route/$project_name && php artisan migrate"
+echo "php artisan key:generate"
 
 #HACK TO GENERATE APP_KEY
-echo "`cd $project_route && php artisan key:generate --show`"
-laravel_key=`cd $project_route && php artisan key:generate --show`
-echo "APP_KEY=$laravel_key" >> $project_route/.env
-cd $project_route && php artisan migrate
+echo "Generating APP_KEY…"
+app_key="$(php artisan key:generate --show 2>/dev/null)"
+if [[ -n "$app_key" && "$app_key" != "base64:"* ]]; then
+  # Laravel 10/11 returns base64:… already; keep as-is
+  :
+fi
+# Only append if not already present
+if ! grep -q '^APP_KEY=' .env; then
+  echo "APP_KEY=$app_key" >> .env
+fi
+
+echo "php artisan migrate"
+php artisan migrate

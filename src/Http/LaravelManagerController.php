@@ -6,7 +6,7 @@ use Illuminate\Routing\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Log;
-use Pete\WordPressPlusLaravel\Models\Site;       // Reuse your extended Site model if desired
+use Pete\LaravelManager\Models\Site;       // Reuse your extended Site model if desired
 use App\Services\PeteOption;                      // Same PeteOption service used in WPL
 use Symfony\Component\HttpFoundation\Response;
 use App\Services\PeteService;
@@ -132,7 +132,8 @@ class LaravelManagerController extends Controller
         $site->laravel_version              = $data['selected_version']   ?? null;
 
         $site->save();
-        // $site->create_laravel();
+        $site->create_laravel();
+        $site->create_config_file();
 
         // 4) Respond
         return response()->json([

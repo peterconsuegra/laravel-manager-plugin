@@ -1,11 +1,12 @@
 <?php
 
-namespace Pete\WordPressPlusLaravel\Models;
+namespace Pete\LaravelManager\Models;
 
 use App\Models\Site as BaseSite;
 use App\Services\PeteOption;
 use Log;
 use Illuminate\Support\Facades\Crypt; 
+use App\Services\OMysql;
 
 // Extending Site Model 
 class Site extends BaseSite   
@@ -42,6 +43,8 @@ class Site extends BaseSite
 
     public function create_laravel() {
 		
+		Log::info("laravel1");
+		
 		$pete_options = new PeteOption();
 	    $app_root = $pete_options->get_meta_value('app_root');
         $mysql_bin = $pete_options->get_meta_value('mysql_bin');
@@ -58,68 +61,73 @@ class Site extends BaseSite
 		$db_root_pass = env('PETE_ROOT_PASS');
 		$mysqlcommand = $mysql_bin . "mysql";
 		$debug = env('PETE_DEBUG');
-
+		
 		$base_path = base_path();
 		
-		$target_site = Site::findOrFail($this->wordpress_laravel_target_id);
-		$this->wordpress_laravel_url = $this->wordpress_laravel_name . '.' . $target_site->url;
-		$this->url = $this->wordpress_laravel_url;	
-	    $this->app_name = "WordPress+Laravel";
-		$this->wp_load_path = $app_root . "/" . $target_site->name;
-		$this->wp_url = $target_site->url;
+		//GIT
+		$git_branch = isset($this->wordpress_laravel_git_branch) ? $this->wordpress_laravel_git_branch : "none";
+		$git_url = isset($this->wordpress_laravel_git) ? $this->wordpress_laravel_git : "none";
+		$laravel_version = isset($this->laravel_version) ? $this->laravel_version : "none";
 		
-		if($this->action_name == "new_wordpress_laravel"){
-			$this->action_name = "New";
-			$this->wordpress_laravel_git_branch = "something";
-	  		$this->wordpress_laravel_git = "something";
-		}else{
-			$this->action_name = "Import";
-		}
 		
-		$db_host = env('DB_HOST') ?? 'localhost';
-		if($db_host != "localhost")
-			$db_host=$db_host;
-	
-		$this->db_name = $target_site->db_name;
-		$this->db_user = $target_site->db_user;
-		$db_user_pass = Crypt::decryptString($target_site->db_password);
-	    
+		//CREATE DATABASE
+	    $db_name = "db_" . substr(str_shuffle("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"), 0, 10);
+		$db_user = "usr_" . substr(str_shuffle("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"), 0, 10);
+		$db_user_pass = substr(str_shuffle("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"), 0, 10);
+		$db_host = 'localhost';
+		OMysql::create_database($db_name);
+        OMysql::create_user_and_grant($db_user, $db_user_pass, $db_name);
 		
-		#hack project_name for multiple dashboard.* logic
-		if($this->integration_type == "separate_subdomain"){
-			$this->name = $this->name . str_replace(".","",$this->wp_url);
-		}else{
-			$this->url = $target_site->url."/$this->name";
-		}
-
-		if($target_site->ssl == true){
-			$ssl = "true";
-		}else{
-			$ssl = "false";
-		}
+		$composer_bin = "composer";
+			
+		$command = "./create_laravel.sh -p {$db_root_pass} -r {$app_root} -m {$logs_route} -z {$os_distribution} -a {$server_conf} -b $git_branch -g {$git_url} -n {$this->name} -u {$this->url} -j {$os_version} -v {$os} -t {$server} -w {$server_version} -c {$this->action_name} -o {$laravel_version} -h {$composer_bin} -x {$db_host} -k {$debug} -q {$db_name} -y {$db_user} -i {$db_user_pass}";
 		
-		$script_path = $base_path."/vendor/peteconsuegra/wordpress-plus-laravel-plugin/src";
-		$command = "./create_wordpress_laravel.sh -p {$db_root_pass} -r {$app_root} -m {$logs_route} -z {$os_distribution} -a {$server_conf} -b {$this->wordpress_laravel_git_branch} -g {$this->wordpress_laravel_git} -n {$this->name} -u {$this->wordpress_laravel_url} -j {$os_version} -v {$os} -l {$this->wp_load_path} -e {$this->wp_url} -t {$server} -w {$server_version} -c {$this->action_name} -o {$this->laravel_version} -h {$ssl} -x {$db_host} -k {$debug} -q {$target_site->db_name} -y {$this->db_user} -i {$db_user_pass} -s {$this->integration_type} -d {$this->wordpress_laravel_name}";
-	    chdir("$script_path/scripts/");
+        $script_path = $base_path."/vendor/peteconsuegra/laravel-manager-plugin/src";
+		chdir("$script_path/scripts/");
 		
 	   	putenv("COMPOSER_HOME=/usr/local/bin/composer");
 		putenv("COMPOSER_CACHE_DIR=~/.composer/cache");
-		
-		#Site::change_file_permission("$script_path/scripts/create_wordpress_laravel.sh");
+	   	
 		$output = shell_exec($command);
 	  	if($debug == "active"){
-			Log::info("Action: create_wordpress_laravel");
+			Log::info("Action: create_laravel");
 			Log::info($command);
   			Log::info("Output:");
 			Log::info($output);
 	  	}
-		
+
 		$this->output = $this->output . "####### WORDPRESS LARAVEL #######\n";	 
 		$this->output .= $output;
 	   	$this->save();
-		
-		if($this->integration_type != "inside_wordpress")
-			$this->create_config_file();
 	  
 	}
+
+     public function create_config_file() {
+
+        $debug = env('PETE_DEBUG');
+        $base_path = base_path();
+        $pete_options = new PeteOption();
+	    $app_root = $pete_options->get_meta_value('app_root');
+        $logs_route = $pete_options->get_meta_value('logs_route');
+        $server_conf = $pete_options->get_meta_value('server_conf');
+        $site_url = $this->url;
+       
+		$command = "./create_config_file.sh -u {$this->url} -a {$app_root} -n {$this->name} -z {$logs_route} -s {$server_conf}";
+		
+        $script_path = $base_path."/vendor/peteconsuegra/laravel-manager-plugin/src";
+		chdir("$script_path/scripts/");
+
+        $output = shell_exec($command);
+	  	if($debug == "active"){
+			Log::info("Action: create_laravel");
+			Log::info($command);
+  			Log::info("Output:");
+			Log::info($output);
+	  	}
+
+        $this->output .= $output;
+	   	$this->save();
+
+     }
+
 }
