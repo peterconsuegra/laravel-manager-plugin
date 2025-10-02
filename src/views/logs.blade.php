@@ -41,23 +41,13 @@
       <h2 class="mb-0">Laravel Manager — Logs</h2>
     </div>
 
-    @php
-      // $target is provided by the controller
-      $integrationUrl = $site->integration_type === 'separate_subdomain'
-        ? $site->wordpress_laravel_url
-        : ($target->url . '/' . $site->name);
-    @endphp
 
     <div class="col-md-7 d-flex gap-2 justify-content-md-end">
       <a href="{{ route('lm.index') }}" class="btn btn-outline-secondary">
         <i class="bi bi-arrow-left"></i> Back to list
       </a>
-      <a href="http://{{ $target->url }}" target="_blank" rel="noopener" class="btn btn-outline-primary">
-        <i class="bi bi-wordpress"></i> Open WordPress
-      </a>
-      <a href="http://{{ $integrationUrl }}" target="_blank" rel="noopener" class="btn btn-pete">
-        <i class="bi bi-box-arrow-up-right"></i> Open Laravel App
-      </a>
+     
+     
     </div>
   </div>
 
@@ -74,14 +64,13 @@
             <div class="col-md-6">
               <div class="text-uppercase text-muted">Laravel URL</div>
               <div>
-                <a href="http://{{ $integrationUrl }}" target="_blank" rel="noopener">
-                  {{ $integrationUrl }}
+                <a href="http://{{ $site->url }}" target="_blank" rel="noopener">
+                  {{ $site->url }}
                 </a>
               </div>
             </div>
             <div class="col-md-6">
-              <div class="text-uppercase text-muted">Sync Type</div>
-              <div>{{ $site->integration_type === 'inside_wordpress' ? 'Same Domain' : 'Separate Subdomain' }}</div>
+              
             </div>
             <div class="col-md-6">
               <div class="text-uppercase text-muted">Laravel Version</div>

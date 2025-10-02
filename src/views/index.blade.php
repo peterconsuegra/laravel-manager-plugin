@@ -5,7 +5,7 @@
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="mb-0">Laravel Manager</h2>
     <a class="btn btn-pete" href="{{ route('lm.create') }}">
-      <i class="bi bi-plus-lg"></i> New Integration
+      <i class="bi bi-plus-lg"></i> New Laravel
     </a>
   </div>
 
@@ -14,30 +14,39 @@
   @endif
 
   <div class="panel">
-    <div class="panel-heading"><h3 class="fs-5 mb-0">Integrations</h3></div>
+    <div class="panel-heading"><h3 class="fs-5 mb-0">Laravel instances</h3></div>
     <div class="table-responsive">
       <table class="table align-middle mb-0">
         <thead><tr>
           <th>ID</th>
           <th>Project</th>
-          <th>Type</th>
+          <th>Laravel version</th>
           <th>URL</th>
           <th>Actions</th>
         </tr></thead>
         <tbody>
           @forelse($sites as $s)
-            @php
-              $integrationUrl = $s->integration_type === 'separate_subdomain'
-                ? $s->wordpress_laravel_url
-                : ($s->wp_url . '/' . $s->name);
-            @endphp
             <tr>
               <td>{{ $s->id }}</td>
               <td>{{ $s->name }}</td>
-              <td>{{ $s->integration_type === 'inside_wordpress' ? 'Same Domain' : 'Subdomain' }}</td>
-              <td><a href="http://{{ $integrationUrl }}" target="_blank" rel="noopener">{{ $integrationUrl }}</a></td>
+              <td>{{ $s->laravel_version }}</td>
+              <td><a href="{{ $s->url }}" target="_blank" rel="noopener">{{ $s->url }}</a></td>
               <td>
                 <a class="btn btn-sm btn-outline-primary" href="{{ route('lm.logs', $s->id) }}">Logs</a>
+
+                <form
+                  action="{{ route('lm.delete') }}"
+                  method="POST"
+                  class="d-inline"
+                  onsubmit="return confirm('Delete this Laravel instance? This cannot be undone.');"
+                >
+                  @csrf
+                  <input type="hidden" name="site_id" value="{{ $s->id }}">
+                  <button type="submit" class="btn btn-sm btn-outline-danger">
+                    <i class="bi bi-trash"></i> Delete
+                  </button>
+                </form>
+
               </td>
             </tr>
           @empty

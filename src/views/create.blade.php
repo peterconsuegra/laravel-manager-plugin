@@ -54,6 +54,11 @@
 @endpush
 
 @section('content')
+@php
+  // Use the same "domain template" approach as resources/views/sites/create.blade.php
+  $template = $template ?? (isset($pete_options) ? ($pete_options->get_meta_value('domain_template') ?? null) : null);
+@endphp
+
 <div id="lm-create" class="container-fluid" v-cloak>
 
   {{-- hero ------------------------------------------------------------- --}}
@@ -62,8 +67,8 @@
       <img src="/pete.png" alt="WordPress Pete" class="img-fluid" style="max-height:200px">
     </div>
     <div class="col-md-6 d-flex flex-column justify-content-center">
-      <h2 class="mb-1">Create Laravel Manager Integration</h2>
-      <p>Unlock 50,000+ WordPress plugins with Laravel’s clean MVC—manage new or imported Laravel apps linked to your WordPress.</p>
+      <h2 class="mb-1">Create or Import a Laravel Instance</h2>
+      <p>Scale smarter: run Laravel inside WordPress Pete’s fast and reliable ecosystem.</p>
     </div>
   </div>
 
@@ -97,7 +102,7 @@
               </button>
             </div>
             <div class="form-text">
-              This is the <em>public</em> key (<code>id_rsa.pub</code>); it’s safe to share with Git providers.
+              This is the <em>public</em> key (<code>/var/www/.ssh/id_ed25519.pub</code>); it’s safe to share with Git providers.
             </div>
           @endif
         </div>
@@ -195,40 +200,44 @@
             </div>
           </div>
 
-          {{-- Integration type --}}
-          <div class="mb-3" id="integration_type_wrap" v-show="showCommon">
-            <label for="integration_type-field" class="form-label">Laravel Sync Type</label>
-            <select class="form-select" id="integration_type-field" name="integration_type" v-model="form.integration_type" @change="updateHints">
-              <option value="">Select type</option>
-              <option value="inside_wordpress">Same domain</option>
-              <option value="separate_subdomain">Separate subdomain</option>
-            </select>
-            <div class="form-text">@{{ integrationHelp }}</div>
-          </div>
-
-          {{-- App name --}}
+          {{-- Laravel URL (same UX as sites/create) --}}
           <div class="mb-3" id="app_name_wrap" v-show="showCommon">
-            <label for="laravel_app_name-field" class="form-label">Laravel app name</label>
-            <input type="text"
-                   id="laravel_app_name-field"
-                   name="laravel_app_name"
-                   v-model="form.laravel_app_name"
-                   class="form-control"
-                   placeholder="myapp">
-            <div class="form-text">@{{ appNameHint }}</div>
-          </div>
+            <label for="laravel-url-field" class="form-label">Laravel URL</label>
 
-          {{-- Target WordPress site --}}
-          <div class="mb-3" id="target_wrap" v-show="showCommon">
-            <label for="laravel_target-field" class="form-label">Target WordPress site</label>
-            <select id="laravel_target-field"
-                    name="laravel_target"
-                    class="form-select"
-                    v-model="form.laravel_target"
-                    :disabled="sitesLoading || sites.length === 0">
-              <option value="">@{{ sitesLoading ? 'Loading sites…' : 'Select the WordPress instance to integrate' }}</option>
-              <option v-for="s in sites" :key="s.id" :value="String(s.id)">@{{ s.url }}</option>
-            </select>
+            @if($template && $template !== 'none')
+              <div class="input-group">
+                <input
+                  type="text"
+                  class="form-control"
+                  id="laravel-url-field"
+                  name="laravel_url_visual"
+                  placeholder="subdomain"
+                  v-model.trim="urlInput"
+                  required
+                  aria-describedby="laravelUrlHelp"
+                >
+                <span class="input-group-text">.{{ $template }}</span>
+              </div>
+              <div id="laravelUrlHelp" class="form-text">
+                Enter only the subdomain; Pete appends <code>.{{ $template }}</code> automatically.
+              </div>
+            @else
+              <input
+                type="text"
+                class="form-control"
+                id="laravel-url-field"
+                name="laravel_url_visual"
+                placeholder="e.g. myapp.mysite.com or mysite.com/myapp"
+                v-model.trim="urlInput"
+                required
+                aria-describedby="laravelUrlHelp"
+              >
+              <div id="laravelUrlHelp" class="form-text">
+                Use a valid host/domain (don’t include protocol). For path installs, use <code>example.com/myapp</code>.
+              </div>
+            @endif
+
+            <div class="form-text">@{{ appNameHint }}</div>
           </div>
 
           <div class="d-flex align-items-center gap-2">
@@ -320,25 +329,24 @@
         const sitesLoading = ref(false);
         const errors       = reactive({});
 
+        // URL input similar to sites/create
+        const urlInput = ref('');
+
         // old() hydration from Blade
         const oldVals = {
-          action_name:       @json(old('action_name')),
-          selected_version:  @json(old('selected_version')),
-          integration_type:  @json(old('integration_type')),
-          laravel_git:       @json(old('laravel_git')),
-          laravel_git_branch:@json(old('laravel_git_branch')),
-          laravel_app_name:  @json(old('laravel_app_name')),
-          laravel_target:    @json(old('laravel_target')),
+          action_name:        @json(old('action_name')),
+          selected_version:   @json(old('selected_version')),
+          laravel_git:        @json(old('laravel_git')),
+          laravel_git_branch: @json(old('laravel_git_branch')),
+          laravel_url_visual: @json(old('laravel_url_visual')),
         };
 
         const form = reactive({
-          action_name:       oldVals.action_name || '',
-          selected_version:  oldVals.selected_version || '',
-          integration_type:  oldVals.integration_type || '',
-          laravel_git:       oldVals.laravel_git || '',
-          laravel_git_branch:oldVals.laravel_git_branch || 'main',
-          laravel_app_name:  oldVals.laravel_app_name || '',
-          laravel_target:    oldVals.laravel_target ? String(oldVals.laravel_target) : '',
+          action_name:        oldVals.action_name || '',
+          selected_version:   oldVals.selected_version || '',
+          laravel_git:        oldVals.laravel_git || '',
+          laravel_git_branch: oldVals.laravel_git_branch || 'main',
+          laravel_url_visual: oldVals.laravel_url_visual || '',
         });
 
         const integrationHelp = ref('');
@@ -366,6 +374,13 @@
             integrationHelp.value = '';
             appNameHint.value     = '';
           }
+        }
+
+        function normalizeHost(val){
+          return (val || '')
+            .trim()
+            .replace(/^https?:\/\//i, '')
+            .replace(/\/+$/,'');
         }
 
         async function loadWordPressSites(){
@@ -397,7 +412,10 @@
           // clear previous errors
           for (const k of Object.keys(errors)) delete errors[k];
 
-          // basic client checks (mirrors backend)
+          // Map visible URL field -> backend field name expected by controller
+          form.laravel_url_visual = normalizeHost(urlInput.value); // <-- fixed line
+
+          // basic client checks (mirrors backend + URL required)
           if(!form.action_name){
             errors.action_name = ['Please select an action.'];
           }
@@ -409,9 +427,10 @@
             if(!gitUrlOk.value)   errors.laravel_git = ['Use an https:// or git@ URL.'];
             if(!form.laravel_git_branch) errors.laravel_git_branch = ['Branch is required.'];
           }
-          if(!form.integration_type)   errors.integration_type   = ['Please select a sync type.'];
-          if(!form.laravel_app_name)   errors.laravel_app_name   = ['Please enter an app name.'];
-          if(!form.laravel_target)     errors.laravel_target     = ['Please select a target WordPress site.'];
+
+          if(!form.laravel_url_visual){
+            errors.laravel_url_visual = ['Please enter a Laravel URL/subdomain.'];
+          }
 
           if(Object.keys(errors).length){ return; }
 
@@ -468,6 +487,16 @@
           if(form.action_name){ loadWordPressSites(); }
           updateHints();
 
+          // If old('laravel_url_visual') existed, hydrate visible url field
+          if(form.laravel_url_visual && !urlInput.value){
+             urlInput.value = form.laravel_url_visual;
+          }
+
+          // Focus the URL input shortly after mount
+          setTimeout(() => {
+            try { document.getElementById('laravel-url-field')?.focus(); } catch(_) {}
+          }, 80);
+
           // Reset UI if page is restored from bfcache
           window.addEventListener('pageshow', function (evt) {
             if (evt.persisted) {
@@ -478,6 +507,7 @@
 
         return {
           form,
+          urlInput,
           submitting,
           sites,
           sitesLoading,
