@@ -12,6 +12,7 @@ use Symfony\Component\HttpFoundation\Response;
 use App\Services\PeteService;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use App\Services\OServer;
 
 class LaravelManagerController extends Controller
 {
@@ -131,9 +132,9 @@ class LaravelManagerController extends Controller
         $site->wordpress_laravel_git_branch = $data['laravel_git_branch'] ?? null;
         $site->laravel_version              = $data['selected_version']   ?? null;
 
-        $site->save();
         $site->create_laravel();
         $site->create_config_file();
+        OServer::reload_server();
 
         // 4) Respond
         return response()->json([
@@ -177,9 +178,8 @@ class LaravelManagerController extends Controller
 
         try {
             // If you want to run your removal script too, uncomment:
-            // $site->delete_wordpress_laravel();
-
-            $site->delete(); // <- remove DB row
+            $site->delete_laravel();
+            $site->delete(); 
 
             return back()->with('status', 'Laravel instance removed.');
         } catch (\Throwable $e) {

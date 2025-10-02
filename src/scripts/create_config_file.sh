@@ -43,3 +43,5 @@ echo "
 	CustomLog $logs_route/$project_name/access.log combined
 			
 </VirtualHost>" > $server_conf/$project_name.conf
+
+cd /etc/apache2/sites-enabled && ln -s /etc/apache2/sites-available/$project_name.conf $project_name.conf
