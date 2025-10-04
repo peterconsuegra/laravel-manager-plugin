@@ -22,7 +22,6 @@
           <th>Project</th>
           <th>Action</th>
           <th>Laravel version</th>
-          <th>DB name</th>
           <th>URL</th>
           <th>Actions</th>
         </tr></thead>
@@ -33,7 +32,6 @@
               <td>{{ $s->name }}</td>
               <td>{{ $s->action_name }}</td>
               <td>{{ $s->laravel_version }}</td>
-              <td>{{ $s->db_name }}</td>
               <td><a href="http://{{ $s->url }}" target="_blank" rel="noopener">{{ $s->url }}</a></td>
               <td>
                 <a class="btn btn-sm btn-outline-primary" href="{{ route('lm.logs', $s->id) }}">Logs</a>

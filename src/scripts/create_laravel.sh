@@ -57,7 +57,7 @@ if [[ $action_name == "New" ]]; then
 	echo "check2"
 	mkdir $project_route
 	echo "cd $project_route && $composer_bin create-project laravel/laravel="$laravel_version" . --prefer-dist 2>&1"
-	cd $project_route && composer create-project laravel/laravel="$laravel_version" . --prefer-dist 2>&1
+	cd $project_route && $composer_bin create-project laravel/laravel="$laravel_version" . --prefer-dist 2>&1
 
 elif [[ $action_name == "Import" ]]; then
 	echo "check3"
@@ -119,16 +119,17 @@ cd "$project_route"
 echo "Running the following commands..."
 echo "php artisan key:generate"
 
-APP_BASE_PATH="$project_route" \
-php "$project_route/artisan" config:clear >/dev/null 2>&1 || true
-
-# Clear parent env and inject ONLY what you need + the .env content
 #HACK TO GENERATE APP_KEY
-echo "`cd $project_route && php artisan key:generate --show`"
-laravel_key=`cd $project_route && php artisan key:generate --show`
-echo "APP_KEY=$laravel_key" >> $project_route/.env
+echo "Generating APP_KEY…"
+app_key="$(php artisan key:generate --show 2>/dev/null)"
+if [[ -n "$app_key" && "$app_key" != "base64:"* ]]; then
+  # Laravel 10/11 returns base64:… already; keep as-is
+  :
+fi
+# Only append if not already present
+if ! grep -q '^APP_KEY=' .env; then
+  echo "APP_KEY=$app_key" >> .env
+fi
 
-env -i PATH="$PATH" HOME="$HOME" \
-  $(grep -v '^\s*#' "$project_route/.env" | xargs -I{} echo {}) \
-  APP_BASE_PATH="$project_route" \
-  php "$project_route/artisan" migrate 
+echo "php artisan migrate"
+php artisan migrate
