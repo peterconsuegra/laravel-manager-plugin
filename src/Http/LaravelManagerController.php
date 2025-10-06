@@ -13,6 +13,8 @@ use App\Services\PeteService;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use App\Services\OServer;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 
 class LaravelManagerController extends Controller
 {
@@ -192,11 +194,39 @@ class LaravelManagerController extends Controller
         }
     }
 
-    public function generateSsl(Request $request)
+    public function generateSsl(Request $request): Response
     {
-        // Wire this to your existing internal SSL endpoint/CGI if desired
-        // or return a JSON message while you pipe to your CGI script.
-        return response()->json(['ok' => true, 'message' => 'SSL generation queued']);
+        $peteOptions = app(PeteOption::class);
+
+        // Only allow SSL generation in production
+        if ($peteOptions->get_meta_value('environment') !== 'production') {
+            return response()->json([
+                'error'   => true,
+                'message' => 'This feature is only available in production environment',
+            ], 400);
+        }
+
+        $currentUser = Auth::user();
+
+        /** @var Site $site */
+        $site = Site::findOrFail((int) $request->input('site_id'));
+
+        // If you have a policy for sites.manage, enforce it (matches WPL controller)
+        if (class_exists(\Illuminate\Support\Facades\Gate::class) && ! Gate::allows('sites.manage', $site)) {
+            return response()->json([
+                'error'   => true,
+                'message' => 'You are not authorized to manage this site.',
+            ], 403);
+        }
+
+        // Optimistically mark SSL and kick off cert generation
+        $site->ssl = true;
+        $site->save();
+
+        // Delegate to your model method that triggers certbot/ACME flow
+        $site->generate_ssl((string) $currentUser->email);
+
+        return response()->json(['ok' => true, 'site_id' => $site->id]);
     }
 
     private function readSshPublicKey(): array
