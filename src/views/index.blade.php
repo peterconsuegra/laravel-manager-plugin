@@ -14,8 +14,8 @@
         <div class="col-md-6 d-flex flex-column justify-content-center">
              <a class="btn btn-pete" href="{{ route('lm.create') }}">
                 <i class="bi bi-plus-lg"></i> New Laravel
-              </a> <br />
-            <p>Easily create and import Laravel instances into WordPress Pete environment with one click</p>
+              </a> 
+            <p><br /> Easily create and import Laravel instances into WordPress Pete environment with one click</p>
         </div>
     </div>
 
@@ -35,15 +35,29 @@
         </div>
     @endif
 
-
-  @if(session('status'))
-    <div class="alert alert-success">{{ session('status') }}</div>
-  @endif
-
   <div class="panel">
-    <div class="panel-heading"><h3 class="fs-5 mb-0">Laravel instances</h3></div>
+    <div class="panel-heading d-flex justify-content-between align-items-center">
+      <h3 id="laravel_title" class="fs-5 mb-0">Laravel instances</h3>
+
+      <div class="d-flex align-items-center gap-2">
+        <form method="GET" action="{{ route('lm.index') }}" class="d-inline-block">
+          <label for="per_page" class="form-label me-2 mb-0 small text-muted">Rows per page:</label>
+          <select name="per_page" id="per_page"
+                  class="form-select form-select-sm d-inline-block w-auto"
+                  onchange="this.form.submit()">
+            @foreach([5,10,20,50] as $size)
+              <option value="{{ $size }}" {{ request('per_page', 10) == $size ? 'selected' : '' }}>
+                {{ $size }}
+              </option>
+            @endforeach
+          </select>
+        </form>
+
+        <small class="text-muted">{{ number_format($sites->total()) }} total</small>
+      </div>
+</div>
     <div class="table-responsive">
-      <table class="table align-middle mb-0">
+      <table class="table table-hover table-striped align-middle mb-0">
        <thead>
           <tr>
             <th>ID</th>

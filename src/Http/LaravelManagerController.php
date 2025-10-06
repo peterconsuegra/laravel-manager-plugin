@@ -30,13 +30,16 @@ class LaravelManagerController extends Controller
 
     public function index()
     {
-        // List the Laravel syncs/sites relevant to this manager
-        // Adjust the query to your own structure
-        $sites = Site::where('app_name', 'Laravel')
+        // Allow per-page like WPL (1..50, default 10)
+        $perPage = (int) request()->integer('per_page', 10);
+        $perPage = max(1, min($perPage, 50));
+
+        $sites = \Pete\LaravelManager\Models\Site::where('app_name', 'Laravel')
             ->orderByDesc('id')
-            ->paginate(20);
-        
-        $viewsw      = '/laravel-manager';
+            ->paginate($perPage)
+            ->withQueryString();
+
+        $viewsw = '/laravel-manager';
 
         return view('laravel-manager::index', compact('sites','viewsw'));
     }
