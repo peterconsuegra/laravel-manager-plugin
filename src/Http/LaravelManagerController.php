@@ -34,7 +34,7 @@ class LaravelManagerController extends Controller
             ->orderByDesc('id')
             ->paginate(20);
         
-        $viewsw      = 'laravel-manager';
+        $viewsw      = '/laravel-manager';
 
         return view('laravel-manager::index', compact('sites','viewsw'));
     }
@@ -44,7 +44,7 @@ class LaravelManagerController extends Controller
         // SSH key (optional): show to user for private repos
         [$sshPubKey, $sshKeyError] = $this->readSshPublicKey();
 
-         $viewsw      = 'laravel-manager';
+        $viewsw      = '/laravel-manager';
 
         return view('laravel-manager::create', [
             'sshPubKey'    => $sshPubKey,
@@ -156,7 +156,7 @@ class LaravelManagerController extends Controller
         $web_server_error_file_content = @file_get_contents($web_server_error_file) ?: '';
         $web_server_access_file_content= @file_get_contents($web_server_access_file) ?: '';
 
-        $viewsw      = 'laravel-manager';
+        $viewsw      = '/laravel-manager';
 
         return view('laravel-manager::logs', compact(
             'site',
